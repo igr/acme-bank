@@ -1,0 +1,10 @@
+[versions]
+junit-jupiter = "5.10.3"
+faker-ver = "2.0.0-rc.10"
+
+[libraries]
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+faker = {module = "io.github.serpro69:kotlin-faker", version.ref = "faker-ver"}
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.0" }
