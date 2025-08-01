@@ -1,0 +1,4 @@
+### GET customer
+
+GET http://localhost:8080/api/customers/4c0cf3a0-e33e-4fb9-8b6c-b3707b6afa57
+
