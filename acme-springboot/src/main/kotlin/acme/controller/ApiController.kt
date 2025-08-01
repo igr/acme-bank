@@ -7,6 +7,7 @@ import acme.entity.Transaction
 
 import acme.service.CustomerService
 import acme.service.TransactionService
+import io.swagger.v3.oas.annotations.OpenAPIDefinition
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
