@@ -18,15 +18,17 @@ data class Transaction(
 )
 
 data class State(
-    val serverUrl: String,
+    val transactionUrl: String,
+    val totalAmountUrl: String,
     val httpClient: HttpClient,
     val fromAddressMutexes: MutableMap<String, Mutex>,
     val mutexMapLock: Mutex
 )
 
-suspend fun runLoadTest(serverUrl: String, inputFile: String) {
+suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFile: String) {
     val state = State(
-        serverUrl = serverUrl,
+        transactionUrl = transactionUrl,
+        totalAmountUrl = totalAmountUrl,
         httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build(),
@@ -39,6 +41,8 @@ suspend fun runLoadTest(serverUrl: String, inputFile: String) {
     val transactions = loadTransactionsFromCsv(inputFile)
 
     println("Loaded ${transactions.size} transactions")
+
+    val totalAmountBefore = fetchTotalAmount(state.httpClient, state.totalAmountUrl)
 
     val executionTime = measureTimeMillis {
         // Execute all transactions concurrently with proper synchronization:
@@ -53,6 +57,11 @@ suspend fun runLoadTest(serverUrl: String, inputFile: String) {
     }
 
     println("Load test completed in ${executionTime}ms")
+
+    val totalAmountAfter = fetchTotalAmount(state.httpClient, state.totalAmountUrl)
+
+    println("💰Total amounts. before: $totalAmountBefore, after: $totalAmountAfter")
+
 }
 
 private suspend fun executeTransactionWithLock(state: State, transaction: Transaction) {
@@ -61,7 +70,7 @@ private suspend fun executeTransactionWithLock(state: State, transaction: Transa
         state.fromAddressMutexes.getOrPut(transaction.from) { Mutex() }
     }
     fromMutex.withLock {
-        executeTransaction(state.httpClient, state.serverUrl, transaction)
+        executeTransaction(state.httpClient, state.transactionUrl, transaction)
     }
 }
 
@@ -103,6 +112,23 @@ private fun requestBodyOf(transaction: Transaction): String {
     return requestBody
 }
 
+private suspend fun fetchTotalAmount(httpClient: HttpClient, totalAmountUrl: String): Long {
+    val request = HttpRequest.newBuilder()
+        .uri(URI.create(totalAmountUrl))
+        .header("Content-Type", "application/json")
+        .GET()
+        .build()
+
+    return withContext(Dispatchers.IO) {
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        response.body()
+            .substringAfter("\"totalAmount\":")
+            .substringBefore("}")
+            .trim()
+            .toLong()
+    }
+}
+
 private fun loadTransactionsFromCsv(inputFile: String): List<Transaction> {
     val file = File(inputFile)
     if (!file.exists()) {
@@ -135,11 +161,12 @@ suspend fun main(args: Array<String>) {
 //        return
 //    }
 
-    val serverUrl = "http://127.0.0.1:8080/api/transactions"//args[0]
+    val transactionUrl = "http://127.0.0.1:8080/api/transactions"//args[0]
+    val totalAmountUrl = "http://127.0.0.1:8080/api/accounts/total-amount"
     val inputFile = if (args.size > 1) args[1] else "in/input.csv"
 
     try {
-        runLoadTest(serverUrl, inputFile)
+        runLoadTest(transactionUrl, totalAmountUrl, inputFile)
     } catch (e: Exception) {
         println("Error: ${e.message}")
         e.printStackTrace()
