@@ -24,7 +24,8 @@ data class State(
 
 data class Counters(
     val transactions: AtomicLong = AtomicLong(0),
-    val errors: AtomicLong = AtomicLong(0)
+    val errors: AtomicLong = AtomicLong(0),
+    val retries: AtomicLong = AtomicLong(0)
 )
 
 suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFile: String) {
@@ -79,6 +80,7 @@ suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFil
     println("🔄 Counters")
     println("Transactions: ${counters.transactions.get()}")
     println("Errors: ${counters.errors.get()}")
+    println("Retries: ${counters.retries.get()}")
 }
 
 private suspend fun executeTransactionWithLock(state: State, counters: Counters, transaction: Transaction) {
