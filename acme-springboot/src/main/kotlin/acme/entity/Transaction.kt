@@ -1,6 +1,7 @@
 package acme.entity
 
 import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Version
 import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 import java.util.*
@@ -13,5 +14,7 @@ data class Transaction(
     val toAccountId: UUID,
     val amount: Long,
     val timestamp: LocalDateTime,
-    val status: String
+    val status: String,
+    @Version
+    val version: Long = 0
 )

@@ -72,7 +72,7 @@ class TransactionService(
         
         // save transaction record
         val transaction = Transaction(
-            transactionId = null,
+            transactionId = null,   // let the database generate the ID
             fromAccountId = request.from,
             toAccountId = request.to,
             amount = request.amount,
