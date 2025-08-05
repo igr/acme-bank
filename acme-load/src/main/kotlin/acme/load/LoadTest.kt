@@ -9,6 +9,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.measureTimeMillis
 
 data class Transaction(
@@ -25,6 +26,11 @@ data class State(
     val mutexMapLock: Mutex
 )
 
+data class Counters(
+    val transactions: AtomicLong = AtomicLong(0),
+    val errors: AtomicLong = AtomicLong(0)
+)
+
 suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFile: String) {
     val state = State(
         transactionUrl = transactionUrl,
@@ -35,6 +41,8 @@ suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFil
         fromAddressMutexes = mutableMapOf(),
         mutexMapLock = Mutex()
     )
+
+    val counters = Counters()
 
     println("🚀 Starting load test...")
 
@@ -48,9 +56,17 @@ suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFil
         // Execute all transactions concurrently with proper synchronization:
         // no 2 FROM transactions will be executed in the same time.
         coroutineScope {
+            // send only ONE transaction (debugging)
+//            transactions.first().let {
+//                transaction ->
+//                    async {
+//                        executeTransactionWithLock(state, transaction)
+//                    }.await()
+//            }
+            // send ALL transactions
             transactions.map { transaction ->
                 async {
-                    executeTransactionWithLock(state, transaction)
+                    executeTransactionWithLock(state, counters, transaction)
                 }
             }.awaitAll()
         }
@@ -60,21 +76,31 @@ suspend fun runLoadTest(transactionUrl: String, totalAmountUrl: String, inputFil
 
     val totalAmountAfter = fetchTotalAmount(state.httpClient, state.totalAmountUrl)
 
-    println("💰Total amounts. before: $totalAmountBefore, after: $totalAmountAfter")
+    println("💰Total amounts")
+    println("Before: $totalAmountBefore, after: $totalAmountAfter")
+    println("Difference: ${totalAmountAfter - totalAmountBefore}")
 
+    println("🔄 Counters")
+    println("Transactions: ${counters.transactions.get()}")
+    println("Errors: ${counters.errors.get()}")
 }
 
-private suspend fun executeTransactionWithLock(state: State, transaction: Transaction) {
+private suspend fun executeTransactionWithLock(state: State, counters: Counters, transaction: Transaction) {
     // get/create mutex for this 'from' address
     val fromMutex = state.mutexMapLock.withLock {
         state.fromAddressMutexes.getOrPut(transaction.from) { Mutex() }
     }
     fromMutex.withLock {
-        executeTransaction(state.httpClient, state.transactionUrl, transaction)
+        executeTransaction(counters, state.httpClient, state.transactionUrl, transaction)
     }
 }
 
-private suspend fun executeTransaction(httpClient: HttpClient, serverUrl: String, transaction: Transaction) {
+private suspend fun executeTransaction(
+    counters: Counters,
+    httpClient: HttpClient,
+    serverUrl: String,
+    transaction: Transaction
+) {
     try {
         val requestBody = requestBodyOf(transaction)
 
@@ -85,6 +111,7 @@ private suspend fun executeTransaction(httpClient: HttpClient, serverUrl: String
             .build()
 
         withContext(Dispatchers.IO) {
+            counters.transactions.incrementAndGet()
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
             when (response.statusCode()) {
@@ -92,6 +119,7 @@ private suspend fun executeTransaction(httpClient: HttpClient, serverUrl: String
                     println("✅ Success: ${transaction.from} -> ${transaction.to} (${transaction.amount}) - Status: ${response.statusCode()}")
                 }
                 else -> {
+                    counters.errors.incrementAndGet()
                     println("❌ Error: ${transaction.from} -> ${transaction.to} (${transaction.amount}) - Status: ${response.statusCode()}, Body: ${response.body()}")
                 }
             }
