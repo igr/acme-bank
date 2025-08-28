@@ -39,9 +39,13 @@ class ApiController(
     }
 
     @PostMapping("/transactions")
-    suspend fun performTransaction(@RequestBody request: TransactionRequest): ResponseEntity<Any> {
-        val response = transactionService.performTransaction(request)
-        return ResponseEntity.ok(response)
+    fun performTransaction(@RequestBody request: TransactionRequest): ResponseEntity<Any> {
+        return try {
+            val response = transactionService.performTransaction(request).get()
+            ResponseEntity.ok(response)
+        } catch (e: Exception) {
+            ResponseEntity.badRequest().body(mapOf("error" to (e.cause?.message ?: e.message)))
+        }
     }
 
     @GetMapping("/accounts/{accountId}/transactions")

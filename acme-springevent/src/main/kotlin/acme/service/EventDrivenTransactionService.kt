@@ -3,9 +3,9 @@ package acme.service
 import acme.dto.TransactionRequest
 import acme.dto.TransactionResponse
 import acme.entity.Transaction
-import acme.events.TransactionRequested
 import acme.events.TransactionCompleted
 import acme.events.TransactionFailed
+import acme.events.TransactionRequested
 import acme.repository.TransactionRepository
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -63,13 +63,14 @@ class EventDrivenTransactionService(
     @EventListener
     fun handleTransactionFailed(event: TransactionFailed) {
         val future = pendingTransactions[event.correlationId]
-        future?.complete(
-            TransactionResponse(
-                fromAccountId = event.fromAccountId,
-                toAccountId = event.toAccountId,
-                amount = event.amount,
-                status = "FAILED: ${event.reason}"
-            )
+        future?.completeExceptionally(
+            RuntimeException("Failed to perform transaction: ${event.reason} F")
+//            TransactionResponse(
+//                fromAccountId = event.fromAccountId,
+//                toAccountId = event.toAccountId,
+//                amount = event.amount,
+//                status = "FAILED: ${event.reason}"
+//            )
         )
     }
 }
