@@ -17,5 +17,5 @@ data class AcmeConfiguration(
 )
 
 data class LoadConfiguration(
-    val totalRequests: Int = 1_000,
+    val totalRequests: Int = 10_000,
 )
