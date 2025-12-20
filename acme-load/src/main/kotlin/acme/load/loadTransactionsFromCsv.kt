@@ -22,7 +22,7 @@ fun loadTransactionsFromCsv(inputFile: String): List<Transaction> {
             Transaction(
                 from = parts[0],
                 to = parts[1],
-                amount = amount
+                amount = amount / 4     // Adjust amount as per requirement
             )
         }
 }
