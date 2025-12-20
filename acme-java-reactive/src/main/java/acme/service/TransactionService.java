@@ -8,11 +8,14 @@ import acme.repository.AccountRepository;
 import acme.repository.TransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -23,13 +26,16 @@ public class TransactionService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final TransactionalOperator transactionalOperator;
 
-    public TransactionService(AccountRepository accountRepository, TransactionRepository transactionRepository) {
+    public TransactionService(AccountRepository accountRepository,
+                              TransactionRepository transactionRepository,
+                              TransactionalOperator transactionalOperator) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.transactionalOperator = transactionalOperator;
     }
 
-    @Transactional
     public Mono<TransactionResponse> performTransaction(TransactionRequest request) {
         return Mono.zip(
                 accountRepository.findById(request.from())
@@ -69,7 +75,8 @@ public class TransactionService {
                 }
 
                 return executeTransaction(fromAccount, toAccount, request);
-            });
+            })
+            .as(transactionalOperator::transactional);
     }
 
     private Mono<TransactionResponse> executeTransaction(Account fromAccount, Account toAccount, TransactionRequest request) {
