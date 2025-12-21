@@ -16,17 +16,15 @@ public interface TransactionRepository extends CrudRepository<Transaction, UUID>
     @Query("SELECT * FROM transaction WHERE from_account_id = :accountId OR to_account_id = :accountId ORDER BY timestamp DESC")
     List<Transaction> findByAccountId(@Param("accountId") UUID accountId);
 
-    @Query("SELECT * FROM transaction WHERE from_account_id = :fromAccountId")
-    List<Transaction> findByFromAccountId(@Param("fromAccountId") UUID fromAccountId);
+    List<Transaction> findByFromAccountId(UUID fromAccountId);
 
-    @Query("SELECT * FROM transaction WHERE from_account_id = :accountId AND timestamp >= :timestampAfter")
-    List<Transaction> findTransactionsByAccountIdAndTimestampAfter(
-        @Param("accountId") UUID accountId,
-        @Param("timestampAfter") LocalDateTime timestampAfter
+    List<Transaction> findTransactionsByFromAccountIdAndTimestampAfter(
+        UUID accountId,
+        LocalDateTime timestampAfter
     );
 
     @Query("SELECT * FROM transaction WHERE from_account_id = :accountId ORDER BY timestamp DESC LIMIT :limit")
-    List<Transaction> findTopByAccountIdOrderByTimestampDesc(
+    List<Transaction> findTopByFromAccountIdOrderByTimestampDesc(
         @Param("accountId") UUID accountId,
         @Param("limit") int limit
     );

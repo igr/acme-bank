@@ -9,16 +9,27 @@ import java.util.UUID;
 
 @Table("transaction")
 public record Transaction(
-    @Id UUID transactionId,
-    UUID fromAccountId,
-    UUID toAccountId,
-    Long amount,
-    LocalDateTime timestamp,
-    String status,
-    @Version Long version
+        @Id UUID transactionId,
+        UUID fromAccountId,
+        UUID toAccountId,
+        Long amount,
+        LocalDateTime timestamp,
+        String status,
+        @Version Long version
 ) {
-    public Transaction(UUID transactionId, UUID fromAccountId, UUID toAccountId,
-                       Long amount, LocalDateTime timestamp, String status) {
-        this(transactionId, fromAccountId, toAccountId, amount, timestamp, status, null);
+    public Transaction(
+            UUID transactionId,
+            UUID fromAccountId, UUID toAccountId,
+            Long amount,
+            LocalDateTime timestamp,
+            String status) {
+        this(
+                transactionId,
+                fromAccountId,
+                toAccountId,
+                amount,
+                timestamp,
+                status,
+                null);
     }
 }
